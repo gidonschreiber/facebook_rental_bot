@@ -158,6 +158,22 @@ async def run():
         await group_page.goto(FB_URL, timeout=60000)
         await group_page.wait_for_timeout(2000)
 
+        # Check for authentication failure
+        # Option 1: Check if redirected to login page
+        current_url = group_page.url
+        if 'login' in current_url:
+            send_telegram("need new authentication tokens", "N/A")
+            print("[DEBUG] Facebook authentication failed: redirected to login page.")
+            await browser.close()
+            return
+        # Option 2: Check if no posts are found
+        articles = await group_page.query_selector_all("div[role='article']")
+        if not articles or len(articles) == 0:
+            send_telegram("need new authentication tokens", "N/A")
+            print("[DEBUG] Facebook authentication failed: no posts found.")
+            await browser.close()
+            return
+
         scroll_attempts = 0
         links = []
         while True:
