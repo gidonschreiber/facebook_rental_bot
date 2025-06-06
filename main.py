@@ -56,32 +56,15 @@ rehavia_street_names = [
 - It is an entire apartment, not just a room
 
 
-Then output: 
-first of all (with no numbers at the beginning) -  If it meets all criteria (if the json results in step 3 all read "true"), 
-print: CRITERIA MET  If it does NOT meet all criteria, print: CRITERIA NOT MET.
-then:
-1. The cleaned post body - once! (without metadata or comments)  
-2. The extracted JSON with this format:
-{{
-  "location": "...",
-  "price": "...",
-  "size": "...",
-  "rooms": "...",
-  "offering room or apartment": "...",
-  "move_in_date": "...",
-  "asking for apartement or offering": "...",
-  "flexible_move_in": true,
-  "contact": "..."
-}}
-
-3. The evaluation of the criteria in this format:
-{{
-  "offering_and_not_asking": true/false,
-  "matches_price": true/false,
-  "matches_location": true/false,
-  "matches_move_in_date": true/false,
-  "offers_entire_apartment": true/false
-}}
+If it meets all criteria, output:
+CRITERIA MET
+מצאנו דירה בשבילך!
+מיקום - [location]
+מחיר - [price]
+גודל - [size]
+חדרים - [rooms]
+תאריך כניסה - [move_in_date]
+איש קשר - [contact]
 
 Post:
 {text}
@@ -116,10 +99,14 @@ Post:
 
 
 def send_telegram(openai_result_text, link):
-    text = f"""{openai_result_text}
-
-[View Post]({link})"""
-    requests.post(
+    # Extract only the part after 'CRITERIA MET'
+    if "CRITERIA MET" in openai_result_text:
+        message = openai_result_text.split("CRITERIA MET", 1)[1].strip()
+    else:
+        message = openai_result_text.strip()
+    text = f"{message}\n\n[View Post]({link})"
+    print(f"[DEBUG] Sending Telegram message: {text}")
+    resp = requests.post(
         f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
         json={
             "chat_id": TELEGRAM_CHAT_ID,
@@ -127,6 +114,7 @@ def send_telegram(openai_result_text, link):
             "parse_mode": "Markdown"
         }
     )
+    print(f"[DEBUG] Telegram API response: {resp.status_code} {resp.text}")
 
 
 async def collect_post_links(page, max_posts=10):
@@ -224,8 +212,9 @@ async def run():
 
                 try:
                     result = analyze_with_openai(all_text)
-                    print("🤖 OpenAI result:", result)
-                    send_notification = isinstance(result, str) and result.strip().startswith("CRITERIA MET")
+                    print("🤖 OpenAI result:", repr(result))
+                    send_notification = isinstance(result, str) and result and result.lstrip().upper().startswith("CRITERIA MET")
+                    print(f"[DEBUG] send_notification: {send_notification}")
                 except Exception as err:
                     print(f"❗ OpenAI parsing error for post {post_id}:", err)
                     result = None
@@ -248,22 +237,3 @@ async def run():
 
 if __name__ == "__main__":
     asyncio.run(run())
-
-
-# sample_post = """
-# להשכרה ברחביה! דירה מהממת ברחוב אלפסי, קומה 2 מתוך 3, שלושה חדרים, מרווחת ושקטה מאוד.
-# כניסה ב-01.08.25. מחיר: 6000 ש"ח לחודש.
-# מתאימה לזוג או משפחה קטנה. יש מעלית ומרפסת שמש.
-# לפרטים נוספים ושליחת תמונות - דברו איתי בפרטי :)
-# """
-# result = analyze_with_openai(sample_post)
-# print("🤖 OpenAI result:", result)
-
-# send_to_telegram = (
-#     isinstance(result, str) and result.strip().startswith("CRITERIA MET")
-# )
-
-# if send_to_telegram:
-#     # נניח קישור פיקטיבי לפוסט
-#     fake_link = "https://www.facebook.com/groups/2231582410418022/posts/9999999999999999/"
-#     send_telegram(result, fake_link)
