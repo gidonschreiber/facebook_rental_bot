@@ -1,0 +1,28 @@
+[
+    { "name": "ar_debug", "value": "1", "domain": ".facebook.com", "path": "/" },
+    { "name": "c_user", "value": "100003273858360", "domain": ".facebook.com", "path": "/" },
+    { "name": "datr", "value": "DG85aFZ3DOam9gEJktAheNHw", "domain": ".facebook.com", "path": "/" },
+    {
+      "name": "fr",
+      "value": "1DiGVLOEETGWoesmt.AWexYcjz7TAWNJsA_cJieYS2cuFvormEG1rKyOPzeNww2Tno1Zk.BoOLDb..AAA.0.0.BoOW8b.AWdOe_lQXDwIVJ2ptRUPfw07Zxo",
+      "domain": ".facebook.com",
+      "path": "/"
+    },
+    {
+      "name": "presence",
+      "value": "C%7B%22t3%22%3A%5B%5D%2C%22utc3%22%3A1748594468800%2C%22v%22%3A1%7D",
+      "domain": ".facebook.com",
+      "path": "/"
+    },
+    { "name": "ps_l", "value": "1", "domain": ".facebook.com", "path": "/" },
+    { "name": "ps_n", "value": "1", "domain": ".facebook.com", "path": "/" },
+    { "name": "sb", "value": "GefoZ33s9KIwmTGgT50X6gDP", "domain": ".facebook.com", "path": "/" },
+    { "name": "wd", "value": "150x798", "domain": ".facebook.com", "path": "/" },
+    {
+      "name": "xs",
+      "value": "39%3AloQLpatdfxOK9A%3A2%3A1748594455%3A-1%3A-1",
+      "domain": ".facebook.com",
+      "path": "/"
+    }
+  ]
+  

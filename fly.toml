@@ -1,0 +1,24 @@
+# fly.toml app configuration file generated for facebook-rental-bot on 2025-05-28T08:59:41+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "facebook-rental-bot-flyio"
+primary_region = 'lhr'
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[experimental]
+  auto_rollback = true
+  allowed_public_ports = []
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PYTHONUNBUFFERED = '1'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
