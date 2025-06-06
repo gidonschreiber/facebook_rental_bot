@@ -190,6 +190,7 @@ async def run():
 
         links = await collect_post_links(group_page, max_posts=10)
         print(f"🔗 Found {len(links)} post links")
+        apartment_found = False
 
         for post_id, link in links:
             if post_id in seen_ids:
@@ -232,6 +233,7 @@ async def run():
 
                 if send_notification:
                     send_telegram(result, link)
+                    apartment_found = True
                 seen_ids.add(post_id)
 
                 await post_page.close()
@@ -239,6 +241,8 @@ async def run():
             except Exception as e:
                 print(f"❗ Error visiting post {post_id}:", e)
 
+        if not apartment_found:
+            send_telegram("ran now, no apartment found", "N/A")
         await browser.close()
         save_seen_ids(seen_ids)
 
