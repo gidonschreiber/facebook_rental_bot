@@ -1,2 +1,9 @@
 # Environment variables
 .env 
+
+cookies.json
+seen_post_ids.json
+group.html
+page.html
+page_1.html
+.DS_Store 

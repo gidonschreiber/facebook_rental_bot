@@ -1,0 +1,38 @@
+name: Facebook Rental Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'  # Runs every hour
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install playwright
+          python -m playwright install --with-deps
+
+      - name: Restore cookies.json from secret
+        run: |
+          echo "${{ secrets.FB_COOKIES_B64 }}" | base64 -d > cookies.json
+
+      - name: Create .env file
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
+
+      - name: Run the bot
+        run: python main.py 

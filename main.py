@@ -15,9 +15,6 @@ client = OpenAI()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-with open("cookies.json", "r") as f:
-    COOKIES = json.load(f)
-
 FB_GROUP_ID = "2231582410418022"
 FB_URL = f"https://www.facebook.com/groups/{FB_GROUP_ID}"
 SEEN_FILE = "seen_post_ids.json"
@@ -145,29 +142,30 @@ async def collect_post_links(page, max_posts=10):
     return links
 
 async def run():
+    send_telegram("Test: Bot started up", "N/A")
     seen_ids = load_seen_ids()
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
-        )
-        await context.add_cookies(COOKIES)
-        group_page = await context.new_page()
-
+        browser = await p.chromium.launch(headless=True, slow_mo=100)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(FB_URL, timeout=60000)
+        # Load cookies from cookies.json
+        if os.path.exists("cookies.json"):
+            with open("cookies.json", "r") as f:
+                cookies = json.load(f)
+            await context.add_cookies(cookies)
+            await page.reload()
         print("🔄 Loading group page...")
-        await group_page.goto(FB_URL, timeout=60000)
-        await group_page.wait_for_timeout(2000)
+        await page.wait_for_timeout(2000)
 
         # Check for authentication failure
-        # Option 1: Check if redirected to login page
-        current_url = group_page.url
+        current_url = page.url
         if 'login' in current_url:
             send_telegram("need new authentication tokens", "N/A")
             print("[DEBUG] Facebook authentication failed: redirected to login page.")
             await browser.close()
             return
-        # Option 2: Check if no posts are found
-        articles = await group_page.query_selector_all("div[role='article']")
+        articles = await page.query_selector_all("div[role='article']")
         if not articles or len(articles) == 0:
             send_telegram("need new authentication tokens", "N/A")
             print("[DEBUG] Facebook authentication failed: no posts found.")
@@ -177,7 +175,7 @@ async def run():
         scroll_attempts = 0
         links = []
         while True:
-            new_links = await collect_post_links(group_page, max_posts=10)
+            new_links = await collect_post_links(page, max_posts=10)
             for link in new_links:
                 if link not in links:
                     links.append(link)
@@ -187,16 +185,21 @@ async def run():
             if scroll_attempts >= 20:
                 print("🛑 Hit scroll cap (20 attempts). Stopping.")
                 break
-            await group_page.mouse.wheel(0, 3000)
-            await group_page.wait_for_selector("div[role='article']", timeout=8000)
-            await group_page.wait_for_timeout(1000)
+            await page.mouse.wheel(0, 3000)
+            await page.wait_for_selector("div[role='article']", timeout=8000)
+            await page.wait_for_timeout(1000)
             scroll_attempts += 1
 
-        links = await collect_post_links(group_page, max_posts=10)
-        print(f"🔗 Found {len(links)} post links")
+        links = await collect_post_links(page, max_posts=10)
+        print(f"�� Found {len(links)} post links")
+        if not links:
+            print("[DEBUG] No post links found. Possible authentication failure.")
+            send_telegram("need new authentication tokens", "N/A")
+            await browser.close()
+            return
         apartment_found = False
 
-        for post_id, link in links:
+        for idx, (post_id, link) in enumerate(links):
             if post_id in seen_ids:
                 continue
 
@@ -215,16 +218,24 @@ async def run():
                 except:
                     pass
 
-                dialog = await post_page.query_selector("div[role='dialog']")
+                # Heuristic: The last div[role='dialog'] is usually the post dialog, as Facebook overlays new dialogs on top. This may not be 100% reliable if other dialogs are opened after the post, but works for typical group post navigation.
+                dialogs = await post_page.query_selector_all("div[role='dialog']")
+                dialog = dialogs[-1] if dialogs else None
                 if not dialog:
-                    print("❌ Skipped: post dialog not found.")
                     await post_page.close()
-                    continue
+                    await browser.close()
+                    return
                 post_text_nodes = await dialog.query_selector_all("div[dir='auto']")
                 all_text_parts = [await node.inner_text() for node in post_text_nodes]
                 all_text = "".join(all_text_parts)
                 print(f"✅ Post content:{all_text}")
-                
+
+                # Additional check for authentication failure: empty post or login prompt
+                if not all_text.strip() or "log in" in all_text.lower() or "כניסה לחשבון" in all_text:
+                    print(f"[DEBUG] Suspected auth failure, all_text content: {repr(all_text)}")
+                    await post_page.close()
+                    await browser.close()
+                    return
 
                 try:
                     result = analyze_with_openai(all_text)

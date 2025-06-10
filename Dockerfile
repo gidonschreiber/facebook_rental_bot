@@ -16,7 +16,7 @@ RUN pip install playwright && playwright install --with-deps
 COPY . .
 
 # Setup cron job to run the bot every hour at minute 0
-RUN echo "0 * * * * cd /app && python main.py >> cron.log 2>&1" > /etc/cron.d/facebook_rental_bot_cron \
+RUN echo "0 * * * * cd /app && python3 main.py >> cron.log 2>&1" > /etc/cron.d/facebook_rental_bot_cron \
     && chmod 0644 /etc/cron.d/facebook_rental_bot_cron \
     && crontab /etc/cron.d/facebook_rental_bot_cron
 
